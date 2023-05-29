@@ -1,42 +1,41 @@
-COMPILER=gcc
+COMPILER=g++
 RM=rm
-SRC_EXTENSION=c
+SRC_EXTENSION=cpp
 OBJ_EXTENSION=o
 RUNNER=
 
-INCDIR=include
-SRCDIR=src
-OBJDIR=obj
-BUILDDIR=build
-BINDIR=bin
+INCDIR=.
+SRCDIR=.
+OBJDIR=.
+BUILDDIR=.
+BINDIR=.
 SRCS = $(wildcard $(SRCDIR)/*.$(SRC_EXTENSION))
 OBJS = $(patsubst $(SRCDIR)/%.$(SRC_EXTENSION), $(OBJDIR)/%.$(OBJ_EXTENSION), $(SRCS))
+DEPENDS = $(patsubst $(SRCDIR)/%.$(SRC_EXTENSION),%.d,$(SRCS))
+HEADERS = $(wildcard $(INCDIR)/*.h)
 
-CFLAGS=-I"./$(INCDIR)"
-LDFLAGS=-fPIC -lm
+CFLAGS=-g -rdynamic -I"./$(INCDIR)" -O0 -Wno-ignored-attributes -fopenmp -mavx2 -Wall
+LDFLAGS=$(CFLAGS) -fPIC -lm -O3 -fopenmp -lglfw -lGL -ldl
 
 EXECNAME=main
 ARGS=
 
-run: build
-	@echo RUNNING $(RUNNER) ./$(BINDIR)/$(EXECNAME) $(ARGS)
-	@echo ================
-	@$(RUNNER) ./$(BINDIR)/$(EXECNAME) $(ARGS)
-.PHONY: run
-
-build: $(OBJS)
-	@$(COMPILER) $^ -o $(BINDIR)/$(EXECNAME) $(LDFLAGS)
-	@echo COMPILE $<
-.PHONY: build
+$(EXECNAME): $(OBJS)
+	@$(COMPILER) $(filter-out %.h,$^) -o $(BINDIR)/$(EXECNAME) $(LDFLAGS)
+	@echo LD $@
+	@echo
+.PHONY: $(EXECNAME)
 
 clean:
-	@$(RM) -f $(OBJS)
+	@$(RM) $(OBJS)
 	@echo RM $(OBJS)
 .PHONY: clean
 
+-include $(DEPENDS)
+
 $(OBJDIR)/%.$(OBJ_EXTENSION): $(SRCDIR)/%.$(SRC_EXTENSION)
-	@$(COMPILER) $(CFLAGS) -c $< -o $@
-	@echo COMPILE $<
+	@$(COMPILER) $(CFLAGS) -MMD -MP -MF $(patsubst %.$(SRC_EXTENSION),%.d,$<) -c $< -o $@
+	@echo CC $@
 
 init:
 	@echo Initializing Folders
