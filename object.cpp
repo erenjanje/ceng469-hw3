@@ -59,11 +59,11 @@ Object::Object(const std::vector<float>& vertices, const std::vector<float>& nor
 }
 
 void Object::draw(ShaderProgram& program, const PerspectiveCamera& camera) {
-    glm::mat4 model = glm::scale(glm::mat4(1.0f), scaling);
-    model = glm::translate(model, translation);
-    model = glm::rotate(model, glm::radians(rotation.z), glm::vec3{0.0f, 0.0f, 1.0f});
-    model = glm::rotate(model, glm::radians(rotation.y), glm::vec3{0.0f, 1.0f, 0.0f});
-    model = glm::rotate(model, glm::radians(rotation.x), glm::vec3{1.0f, 0.0f, 0.0f});
+    // glm::mat4 model = glm::scale(glm::mat4(1.0f), scaling);
+    // model = glm::translate(model, translation);
+    // model = glm::rotate(model, glm::radians(rotation.z), glm::vec3{0.0f, 0.0f, 1.0f});
+    // model = glm::rotate(model, glm::radians(rotation.y), glm::vec3{0.0f, 1.0f, 0.0f});
+    // model = glm::rotate(model, glm::radians(rotation.x), glm::vec3{1.0f, 0.0f, 0.0f});
 
     program.use();
     check_gl("Draw");
@@ -107,4 +107,8 @@ glm::vec3& Object::get_rotation() {
 
 glm::vec3& Object::get_scale() {
     return scaling;
+}
+
+glm::mat4& Object::get_model() {
+    return model;
 }

@@ -1,7 +1,10 @@
 #include "things.hpp"
 #include "glad/glad.h"
 #include <GLFW/glfw3.h>
+#include <glm/glm.hpp>
 #include <glm/ext.hpp>
+#include <glm/gtc/quaternion.hpp>
+#include <glm/gtx/quaternion.hpp>
 
 #include <array>
 #include <glm/geometric.hpp>
@@ -52,7 +55,7 @@ static auto cubemap = Cubemap();
 
 void init() {
     quad = Object(quad_vertices, quad_normals, quad_indices);
-    quad.get_translation() = glm::vec3(0.0f, 0.0f, -1.0f);
+    quad.get_model() = glm::translate(glm::mat4(1.0f), camera.direction);
     shader = ShaderProgram::from_files("vertex.glsl", "fragment.glsl");
     cubemap = Cubemap(cubemap_names);
 }
@@ -63,48 +66,40 @@ void update() {
 
 void draw() {
     shader.use();
-    shader.set("camera_direction", camera.direction);
+    shader.set("camera.position", camera.position);
+    shader.set("camera.direction", camera.direction);
+    shader.set("camera.up", camera.up);
     cubemap.bind();
     quad.draw(shader, camera);
 }
 
 static std::unordered_set<int> pressed_keys;
 
-#define ROTATION_ANGLE 0.06f
+#define ROTATION_ANGLE 0.02f
+
+// Why I don't have this function!!!!!
+static glm::quat angleAxis(const float angle, const glm::vec3 axis) {
+    return glm::normalize(glm::quat(
+        std::cos(glm::radians(angle/2.0f)),
+        std::sin(glm::radians(angle/2.0f)) * axis
+    ));
+}
 
 void handle_key(const int key) {
-    const auto up_rotation = glm::rotate(glm::mat4(1.0f), glm::radians(ROTATION_ANGLE), glm::vec3(0.0f, 1.0f, 0.0f));
-    const auto right_rotation = glm::rotate(glm::mat4(1.0f), glm::radians(ROTATION_ANGLE), glm::vec3(1.0f, 0.0f, 0.0f));
-    const auto down_rotation = glm::rotate(glm::mat4(1.0f), glm::radians(-ROTATION_ANGLE), glm::vec3(0.0f, 1.0f, 0.0f));
-    const auto left_rotation = glm::rotate(glm::mat4(1.0f), glm::radians(-ROTATION_ANGLE), glm::vec3(1.0f, 0.0f, 0.0f));
-    glm::mat4 current;
-    glm::vec3 rotation = {0.0f, 0.0f, 0.0f};
-
-    switch(key) {
-        case GLFW_KEY_LEFT:
-            current = up_rotation;
-            rotation.y -= ROTATION_ANGLE;
-        break;
-        case GLFW_KEY_RIGHT:
-            current = down_rotation;
-            rotation.y += ROTATION_ANGLE;
-        break;
-        case GLFW_KEY_UP:
-            current = right_rotation;
-            rotation.x += ROTATION_ANGLE;
-        break;
-        case GLFW_KEY_DOWN:
-            current = left_rotation;
-            rotation.x -= ROTATION_ANGLE;
-        break;
-    }
-    // camera.up = glm::normalize(glm::vec3(current * glm::vec4(camera.up, 0.0f)));
-    // camera.direction = glm::normalize(glm::vec3(current * glm::vec4(camera.direction, 0.0f)));
-    // quad.get_translation() = camera.direction;
-    // quad.rotate(rotation);
-    // LOG(quad.get_rotation());
-    // LOG(quad.get_translation());
-    // LOG(camera.direction);
+    const auto left = key == GLFW_KEY_LEFT;
+    const auto right = key == GLFW_KEY_RIGHT;
+    const auto up = key == GLFW_KEY_UP;
+    const auto down = key == GLFW_KEY_DOWN;
+    const auto q = key == GLFW_KEY_Q;
+    const auto e = key == GLFW_KEY_E;
+    const auto rotation_quat =
+        glm::angleAxis(up*ROTATION_ANGLE - down*ROTATION_ANGLE, glm::cross(camera.direction, camera.up))
+        * glm::angleAxis(left*ROTATION_ANGLE - right*ROTATION_ANGLE, camera.up)
+        * glm::angleAxis(e*ROTATION_ANGLE - q*ROTATION_ANGLE, camera.direction);
+    // const auto rotation_quat = glm::quat(glm::vec3(up*ROTATION_ANGLE - down*ROTATION_ANGLE, left*ROTATION_ANGLE - right*ROTATION_ANGLE, q*ROTATION_ANGLE - e*ROTATION_ANGLE));
+    camera.direction = glm::vec3(rotation_quat * glm::vec4(camera.direction, 0.0f));
+    camera.up = glm::vec3(rotation_quat * glm::vec4(camera.up, 0.0f));
+    quad.get_model() = glm::toMat4(rotation_quat) * quad.get_model();
 }
 
 void handle_keys() {
@@ -116,9 +111,6 @@ void handle_keys() {
 void key_event(GLFWwindow* window, int key, int scancode, int action, int mods) {
     if(key == GLFW_KEY_ESCAPE and action == GLFW_PRESS) {
         glfwSetWindowShouldClose(window, true);
-        return;
-    }
-    if(key == GLFW_KEY_Q) {
         return;
     }
     if(action == GLFW_PRESS) {
