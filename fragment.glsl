@@ -55,6 +55,12 @@ float grad(int hash, vec3 vec) {
 #define FADE(t) smoother(t)
 #define FASTFLOOR(x) floor(x)
 
+#define PERLIN_MULTIPLIER 3.0f
+#define CLOUD_MAX 10.0f
+#define CLOUD_MIN 0.0f
+#define MAX_CLOUD_Y CLOUD_MAX*PERLIN_MULTIPLIER
+#define MIN_CLOUD_Y CLOUD_MIN*PERLIN_MULTIPLIER
+
 float perlin(vec3 v) {
     float x = v.x;
     float y = v.y;
@@ -105,15 +111,82 @@ float perlin(vec3 v) {
 
     n1 = LERP( t, nx0, nx1 );
     
-    return 0.936f * ( LERP( s, n0, n1 ) );
+    float ret = 0.936f * ( LERP( s, n0, n1 ) );
+
+    if(v.y >= MAX_CLOUD_Y+1.0f) {
+        ret *= 1.0f/(v.y-MAX_CLOUD_Y);
+    } else if(v.y <= MIN_CLOUD_Y-1.0f) {
+        ret *= 1.0f/(MIN_CLOUD_Y-v.y);
+    }
+    return ret;
+}
+
+vec3 random3(vec3 v) {
+    return fract(sin(vec3(dot(v, vec3(127.1f, 311.7f, 296.2f)), dot(v, vec3(269.5f, 183.3f, 561.4f)), dot(v, vec3(742.4f, 253.7f, 510.3f)))) * 43758.5453f);
+}
+
+float worley(vec3 v) {
+    vec3 i_st = floor(v);
+    vec3 f_st = fract(v);
+    float min_dist = 1.0f;
+
+    for(int z = -1; z <= 1; z++) {
+        for(int y = -1; y <= 1; y++) {
+            for(int x = -1; x <= 1; x++) {
+                vec3 neighbor = vec3(float(x), float(y), float(z));
+                vec3 point = random3(i_st + neighbor);
+                vec3 diff = neighbor + point - f_st;
+                float dist = length(diff);
+                min_dist = min(min_dist, dist);
+            }
+        }
+    }
+    float ret = min_dist;
+    if(v.y >= MAX_CLOUD_Y+1.0f) {
+        ret *= 1.0f/(v.y-MAX_CLOUD_Y);
+    } else if(v.y <= MIN_CLOUD_Y-1.0f) {
+        ret *= 1.0f/(MIN_CLOUD_Y-v.y);
+    }
+    return ret;
+}
+
+#define MOON_DIRECTION vec3(-1.0f, 0.1875f, 0.0f)
+
+#define STEP_COUNT 3
+#define SCATTER_STEP_COUNT 10
+#define CLOUD_COLOR vec3(0.9f, 0.9f, 0.9f)
+#define MOONLIGHT vec3(0.309803922f, 0.411764706f, 0.533333333f)
+
+#define WORLEY_ENABLED 0.0f
+
+float scatter_march_ray(vec3 position, vec3 direction, float t) {
+    vec3 point = (position + direction*t)*PERLIN_MULTIPLIER;
+    return perlin(point)*(1.0f - WORLEY_ENABLED*worley(point));
+}
+
+vec3 march_ray(vec3 position, vec3 direction, float t) {
+    float moonlight = 0.0f;
+    vec3 point = (position + direction*t)*PERLIN_MULTIPLIER;
+    for(int i = 0; i < SCATTER_STEP_COUNT; i++) {
+        moonlight += scatter_march_ray(point, MOON_DIRECTION, 1.0f/float(SCATTER_STEP_COUNT) * float(i)) / float(SCATTER_STEP_COUNT);
+    }
+    float cloud_presence = perlin(point)*(1.0f - WORLEY_ENABLED*worley(point));
+    return (CLOUD_COLOR + (1.0f - moonlight)*MOONLIGHT)*cloud_presence;
+}
+
+void raymarch(inout vec3 color, vec3 position, vec3 direction) {
+    for(int i = 0; i < STEP_COUNT; i++) {
+        color += march_ray(position, direction*STEP_COUNT/2.0f, 1.0f/float(STEP_COUNT) * float(i))/float(STEP_COUNT);
+    }
 }
 
 const vec3 cloud_color = vec3(1.0f, 1.0f, 1.0f);
 
 void main() {
-    vec3 ray = vertex_position.xyz - camera.position;
+    vec3 ray = vertex_position.xyz;
     vec3 abs_ray = abs(ray);
     vec3 uvr = ray / max(abs_ray.x, max(abs_ray.y, abs_ray.z));
     vec3 color = texture(cubemap, vec3(-uvr.x, uvr.yz)).rgb;
+    raymarch(color, camera.position, normalize(ray));
     frag_color = vec4(color, 1.0f);
 }

@@ -22,7 +22,7 @@ struct Image {
     void destroy();
 };
 
-void update();
+void update(double dt);
 void draw();
 void init();
 void key_event(GLFWwindow* window, int key, int scancode, int action, int mods);

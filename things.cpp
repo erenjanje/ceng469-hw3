@@ -53,6 +53,8 @@ static auto shader = ShaderProgram();
 static auto camera = PerspectiveCamera();
 static auto cubemap = Cubemap();
 
+static auto camera_pos = glm::vec3(0.0f, 0.0f, 0.0f);
+
 void init() {
     quad = Object(quad_vertices, quad_normals, quad_indices);
     quad.get_model() = glm::translate(glm::mat4(1.0f), camera.direction);
@@ -60,13 +62,14 @@ void init() {
     cubemap = Cubemap(cubemap_names);
 }
 
-void update() {
+void update(double dt) {
+    // LOG(1.0/dt);
     handle_keys();
 }
 
 void draw() {
     shader.use();
-    shader.set("camera.position", camera.position);
+    shader.set("camera.position", camera_pos);
     shader.set("camera.direction", camera.direction);
     shader.set("camera.up", camera.up);
     cubemap.bind();
@@ -76,6 +79,7 @@ void draw() {
 static std::unordered_set<int> pressed_keys;
 
 #define ROTATION_ANGLE 0.02f
+#define TRANSLATION 0.01f
 
 // Why I don't have this function!!!!!
 static glm::quat angleAxis(const float angle, const glm::vec3 axis) {
@@ -92,14 +96,24 @@ void handle_key(const int key) {
     const auto down = key == GLFW_KEY_DOWN;
     const auto q = key == GLFW_KEY_Q;
     const auto e = key == GLFW_KEY_E;
+    const auto right_vec = glm::cross(camera.direction, camera.up);
     const auto rotation_quat =
-        glm::angleAxis(up*ROTATION_ANGLE - down*ROTATION_ANGLE, glm::cross(camera.direction, camera.up))
+        glm::angleAxis(up*ROTATION_ANGLE - down*ROTATION_ANGLE, right_vec)
         * glm::angleAxis(left*ROTATION_ANGLE - right*ROTATION_ANGLE, camera.up)
         * glm::angleAxis(e*ROTATION_ANGLE - q*ROTATION_ANGLE, camera.direction);
-    // const auto rotation_quat = glm::quat(glm::vec3(up*ROTATION_ANGLE - down*ROTATION_ANGLE, left*ROTATION_ANGLE - right*ROTATION_ANGLE, q*ROTATION_ANGLE - e*ROTATION_ANGLE));
     camera.direction = glm::vec3(rotation_quat * glm::vec4(camera.direction, 0.0f));
     camera.up = glm::vec3(rotation_quat * glm::vec4(camera.up, 0.0f));
     quad.get_model() = glm::toMat4(rotation_quat) * quad.get_model();
+
+    const auto w = key == GLFW_KEY_W;
+    const auto a = key == GLFW_KEY_A;
+    const auto s = key == GLFW_KEY_S;
+    const auto d = key == GLFW_KEY_D;
+    const auto space = key == GLFW_KEY_SPACE;
+    const auto lsh = key == GLFW_KEY_LEFT_SHIFT;
+
+    camera_pos += TRANSLATION * (float(w-s)*camera.direction + float(a-d)*right_vec + float(space-lsh)*camera.up);
+    LOG(camera_pos);
 }
 
 void handle_keys() {

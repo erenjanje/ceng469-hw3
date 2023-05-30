@@ -7,6 +7,7 @@
 #include "glad/glad.h"
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
+#include <chrono>
 
 #include <signal.h>
 #include <execinfo.h>
@@ -64,6 +65,8 @@ int main() {
     glCullFace(GL_BACK);
 
     int w, h;
+    auto prev = std::chrono::high_resolution_clock::now();
+    auto now = std::chrono::high_resolution_clock::now();
     
     init();
     while(not glfwWindowShouldClose(window)) {
@@ -72,9 +75,13 @@ int main() {
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         glClearDepth(1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        
-        update();
+        now = std::chrono::high_resolution_clock::now();
+        const auto diff = std::chrono::duration<double>(now - prev);
+
+        update(diff.count());
         draw();
+
+        prev = std::chrono::high_resolution_clock::now();
 
         glfwSwapBuffers(window);
         glfwPollEvents();
