@@ -2,3 +2,4 @@
 *.d
 main
 *.jpg
+.vscode/
