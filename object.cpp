@@ -20,7 +20,6 @@ Object::Object(const std::vector<float>& vertices, const std::vector<float>& nor
 
     glGenVertexArrays(1, &vao);
     check_gl("VAO");
-    LOG(vao);
     glGenBuffers(1, &vertex_array);
     check_gl("VAO");
     glGenBuffers(1, &index_array);

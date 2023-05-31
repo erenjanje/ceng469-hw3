@@ -30,19 +30,6 @@ static void check_gl(const std::string context) {
 
 #define LOG(val) std::cout << "(" << __FILE__ << ":" << __LINE__ << ")[" << (#val) << "]" << ": " << (val) << "\n"
 
-template<typename T>
-std::ostream& operator<<(std::ostream& os, const std::vector<T>& v) {
-    os << "[";
-    for(const auto& e : v) {
-        os << " " << e;
-    }
-    return os << " ]";
-}
-
 static std::ostream& operator<<(std::ostream& os, const glm::vec3& v) {
     return os << "{" << v.x << ", " << v.y << ", " << v.z << "}";
-}
-
-static std::ostream& operator<<(std::ostream& os, const glm::vec4& v) {
-    return os << "{" << v.x << ", " << v.y << ", " << v.z << ", " << v.w << "}";
 }

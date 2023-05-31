@@ -28,7 +28,7 @@ ShaderProgram ShaderProgram::from_files(const std::string vertex_filename, const
     vertex_file.close();
     frag_file.close();
     ShaderProgram program(vertex, frag);
-    return std::move(program);
+    return program;
 }
 
 ShaderProgram::ShaderProgram() {

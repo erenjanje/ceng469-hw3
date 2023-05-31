@@ -53,6 +53,10 @@ static auto shader = ShaderProgram();
 static auto camera = PerspectiveCamera();
 static auto cubemap = Cubemap();
 
+static int cloud_render = 1;
+
+static auto camera_speed = 0.0f;
+
 static auto camera_pos = glm::vec3(0.0f, 0.0f, 0.0f);
 
 void init() {
@@ -62,8 +66,10 @@ void init() {
     cubemap = Cubemap(cubemap_names);
 }
 
+#define TRANSLATION 0.01f
 void update(double dt) {
-    // LOG(1.0/dt);
+    LOG(1.0/dt);
+    camera_pos += TRANSLATION * camera_speed * camera.direction;
     handle_keys();
 }
 
@@ -72,6 +78,7 @@ void draw() {
     shader.set("camera.position", camera_pos);
     shader.set("camera.direction", camera.direction);
     shader.set("camera.up", camera.up);
+    shader.set("cloud_render", (GLuint)cloud_render);
     cubemap.bind();
     quad.draw(shader, camera);
 }
@@ -79,23 +86,15 @@ void draw() {
 static std::unordered_set<int> pressed_keys;
 
 #define ROTATION_ANGLE 0.02f
-#define TRANSLATION 0.01f
-
-// Why I don't have this function!!!!!
-static glm::quat angleAxis(const float angle, const glm::vec3 axis) {
-    return glm::normalize(glm::quat(
-        std::cos(glm::radians(angle/2.0f)),
-        std::sin(glm::radians(angle/2.0f)) * axis
-    ));
-}
+#define CAMERA_ACCEL 0.02f
 
 void handle_key(const int key) {
-    const auto left = key == GLFW_KEY_LEFT;
-    const auto right = key == GLFW_KEY_RIGHT;
-    const auto up = key == GLFW_KEY_UP;
-    const auto down = key == GLFW_KEY_DOWN;
-    const auto q = key == GLFW_KEY_Q;
-    const auto e = key == GLFW_KEY_E;
+    const auto left = key == GLFW_KEY_Q;
+    const auto right = key == GLFW_KEY_E;
+    const auto up = key == GLFW_KEY_U;
+    const auto down = key == GLFW_KEY_J;
+    const auto q = key == GLFW_KEY_A;
+    const auto e = key == GLFW_KEY_D;
     const auto right_vec = glm::cross(camera.direction, camera.up);
     const auto rotation_quat =
         glm::angleAxis(up*ROTATION_ANGLE - down*ROTATION_ANGLE, right_vec)
@@ -106,13 +105,9 @@ void handle_key(const int key) {
     quad.get_model() = glm::toMat4(rotation_quat) * quad.get_model();
 
     const auto w = key == GLFW_KEY_W;
-    const auto a = key == GLFW_KEY_A;
     const auto s = key == GLFW_KEY_S;
-    const auto d = key == GLFW_KEY_D;
-    const auto space = key == GLFW_KEY_SPACE;
-    const auto lsh = key == GLFW_KEY_LEFT_SHIFT;
 
-    camera_pos += TRANSLATION * (float(w-s)*camera.direction + float(a-d)*right_vec + float(space-lsh)*camera.up);
+    camera_speed += (w-s) * CAMERA_ACCEL;
     LOG(camera_pos);
 }
 
@@ -126,6 +121,8 @@ void key_event(GLFWwindow* window, int key, int scancode, int action, int mods) 
     if(key == GLFW_KEY_ESCAPE and action == GLFW_PRESS) {
         glfwSetWindowShouldClose(window, true);
         return;
+    } else if(key == GLFW_KEY_T and action == GLFW_PRESS) {
+        cloud_render = ~cloud_render;
     }
     if(action == GLFW_PRESS) {
         pressed_keys.insert(key);
